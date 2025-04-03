@@ -95,7 +95,7 @@ def main():
         else:
             print("❌ Brak nowych danych.")
 
-        time.sleep(60)
+        time.sleep(10)
 
 if __name__ == '__main__':
     main()
