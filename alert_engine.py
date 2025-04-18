@@ -32,12 +32,12 @@ def generate_alert_text(place, magnitude, depth):
 
     return alert_text, risk_level
 
-# Wczytanie danych z filtered_quakes.csv
-if os.path.exists("filtered_quakes.csv"):
-    df = pd.read_csv("filtered_quakes.csv")
-else:
-    print("❌ Brak pliku filtered_quakes.csv – nie można wygenerować alertów.")
-    exit()
+# Wczytanie danych z filtered_quakes.csv (zakomentowane przez Miłosza 18.04.)
+# if os.path.exists("filtered_quakes.csv"):
+#     df = pd.read_csv("filtered_quakes.csv")
+# else:
+#     print("❌ Brak pliku filtered_quakes.csv – nie można wygenerować alertów.")
+#     exit()
 
 # Sprawdzenie, czy plik alerts.csv już istnieje
 if os.path.exists("alerts.csv"):
@@ -49,28 +49,28 @@ else:
     ])
     existing_ids = set()
 
-# Przetwarzanie alertów
-new_alerts = []
+# # Przetwarzanie alertów
+# new_alerts = []            #(zakomentowane przez Miłosza 18.04.)
 
-for _, row in df.iterrows():
-    if any(location in row["place"] for location in popular_locations):
-        alert_id = row["id"]
-        if alert_id in existing_ids:
-            continue  # unikaj duplikatów
+# for _, row in df.iterrows():
+#     if any(location in row["place"] for location in popular_locations):
+#         alert_id = row["id"]
+#         if alert_id in existing_ids:
+#             continue  # unikaj duplikatów
 
-        alert_text, risk_level = generate_alert_text(row["place"], row["magnitude"], row["depth"])
+#         alert_text, risk_level = generate_alert_text(row["place"], row["magnitude"], row["depth"])
 
-        new_alerts.append({
-            "alert_id": alert_id,
-            "time": row["time"],
-            "place": row["place"],
-            "magnitude": row["magnitude"],
-            "depth": row["depth"],
-            "risk_level": risk_level,
-            "alert_text": alert_text
-        })
+#         new_alerts.append({
+#             "alert_id": alert_id,
+#             "time": row["time"],
+#             "place": row["place"],
+#             "magnitude": row["magnitude"],
+#             "depth": row["depth"],
+#             "risk_level": risk_level,
+#             "alert_text": alert_text
+#         })
 
-        print(alert_text)
+#         print(alert_text)
 
 # Zapis do alerts.csv
 if new_alerts:
@@ -80,3 +80,36 @@ if new_alerts:
     print(f"\n✅ Zapisano {len(new_alerts)} nowych alertów do alerts.csv.")
 else:
     print("ℹ️ Brak nowych alertów do zapisania.")
+
+# Dodane przez Miłosza 18.04.
+def save_to_csv(row):
+    filename = "alerts.csv"
+    file_exists = os.path.isfile(filename)
+
+    df = pd.DataFrame([row])
+    df.to_csv(filename, mode='a', header=not file_exists, index=False)
+
+# Dodane przez Miłosza 18.04.
+def process_event(event):
+    place = event["place"]
+    magnitude = float(event["magnitude"])
+    depth = float(event["depth"])
+    event_id = event["id"]
+    time = event["time"]
+
+    if any(loc in place for loc in popular_locations):
+        alert_text, risk_level = generate_alert_text(place, magnitude, depth)
+        print(alert_text)
+
+        row = {
+            "alert_id": event_id,
+            "time": time,
+            "place": place,
+            "magnitude": magnitude,
+            "depth": depth,
+            "risk_level": risk_level,
+            "alert_text": alert_text
+        }
+
+        save_to_csv(row)
+
