@@ -79,7 +79,6 @@ def main():
 
         for event in events:
             event_info = extract_event_info(event)
-            event_time = event_info['time']
             event_id = event_info['id']
 
             if event_id not in seen_ids:

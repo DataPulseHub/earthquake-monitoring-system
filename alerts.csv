@@ -1,0 +1,16 @@
+alert_id,time,longitude,latitude,place,magnitude,depth,risk_level,alert_text
+ci41143920,1746286438920,"(-117.7813333,)","(34.5808333,)","6 km SE of Lake Los Angeles, CA",1.65,8.76,No risk,"ALERT: No risk in the region 6 km SE of Lake Los Angeles, CA.
+Magnitude: 1.65, Depth: 8.76 km
+Risk level: No risk
+Recommended actions: Monitor the situation, no immediate actions needed.
+"
+ci41143920,1746286438920,"(-117.7813333,)","(34.5808333,)","6 km SE of Lake Los Angeles, CA",1.65,8.76,No risk,"ALERT: No risk in the region 6 km SE of Lake Los Angeles, CA.
+Magnitude: 1.65, Depth: 8.76 km
+Risk level: No risk
+Recommended actions: Monitor the situation, no immediate actions needed.
+"
+ci41143920,1746286438920,"(-117.7813333,)","(34.5808333,)","6 km SE of Lake Los Angeles, CA",1.65,8.76,No risk,"ALERT: No risk in the region 6 km SE of Lake Los Angeles, CA.
+Magnitude: 1.65, Depth: 8.76 km
+Risk level: No risk
+Recommended actions: Monitor the situation, no immediate actions needed.
+"

@@ -1,7 +1,8 @@
 from kafka import KafkaConsumer
 import json
 from datetime import datetime, timedelta
-from alert_engine import process_alert  # zakładamy, że taka funkcja istnieje
+from alert_engine import process_event  # zakładamy, że taka funkcja istnieje
+
 
 KAFKA_BROKER = 'localhost:9092'
 KAFKA_TOPIC = 'earthquake_data'
@@ -29,6 +30,6 @@ print("📡 Real-time consumer działa – przekazuję dane do alert_engine...")
 for msg in consumer:
     event = msg.value
     if should_alert(event):
-        process_alert(event)
+        process_event(event)
     else:
         print(f"⏭️ Pominięto event: {event['id']} – niespełnione warunki")

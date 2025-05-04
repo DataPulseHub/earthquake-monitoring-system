@@ -50,7 +50,7 @@ else:
     existing_ids = set()
 
 # # Przetwarzanie alertów
-# new_alerts = []            #(zakomentowane przez Miłosza 18.04.)
+new_alerts = []            #(zakomentowane przez Miłosza 18.04.)
 
 # for _, row in df.iterrows():
 #     if any(location in row["place"] for location in popular_locations):
@@ -93,6 +93,8 @@ def save_to_csv(row):
 def process_event(event):
     place = event["place"]
     magnitude = float(event["magnitude"])
+    longitude = float(event['longitude']), # has to be here to be able to show on a map
+    latitude = float(event['latitude']),
     depth = float(event["depth"])
     event_id = event["id"]
     time = event["time"]
@@ -104,6 +106,8 @@ def process_event(event):
         row = {
             "alert_id": event_id,
             "time": time,
+            "longitude": longitude,
+            "latitude": latitude,
             "place": place,
             "magnitude": magnitude,
             "depth": depth,
