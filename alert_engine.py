@@ -32,7 +32,7 @@ def generate_alert_text(place, magnitude, depth):
 
     return alert_text, risk_level
 
-# Wczytanie danych z filtered_quakes.csv (zakomentowane przez Miłosza 18.04.)
+# Wczytanie danych z filtered_quakes.csv (zakomentowane przez Miłosza 18.04. i 15.05)
 # if os.path.exists("filtered_quakes.csv"):
 #     df = pd.read_csv("filtered_quakes.csv")
 # else:
@@ -50,7 +50,7 @@ else:
     existing_ids = set()
 
 # # Przetwarzanie alertów
-new_alerts = []            #(zakomentowane przez Miłosza 18.04.)
+# new_alerts = []            #(zakomentowane przez Miłosza 18.04.)
 
 # for _, row in df.iterrows():
 #     if any(location in row["place"] for location in popular_locations):
@@ -72,14 +72,14 @@ new_alerts = []            #(zakomentowane przez Miłosza 18.04.)
 
 #         print(alert_text)
 
-# Zapis do alerts.csv
-if new_alerts:
-    new_df = pd.DataFrame(new_alerts)
-    alerts_df = pd.concat([alerts_df, new_df], ignore_index=True)
-    alerts_df.to_csv("alerts.csv", index=False)
-    print(f"\n✅ Zapisano {len(new_alerts)} nowych alertów do alerts.csv.")
-else:
-    print("ℹ️ Brak nowych alertów do zapisania.")
+# Zapis do alerts.csv zakomentowane 15.05
+# if new_alerts:
+#     new_df = pd.DataFrame(new_alerts)
+#     alerts_df = pd.concat([alerts_df, new_df], ignore_index=True)
+#     alerts_df.to_csv("alerts.csv", index=False)
+#     print(f"\n✅ Zapisano {len(new_alerts)} nowych alertów do alerts.csv.")
+# else:
+#     print("ℹ️ Brak nowych alertów do zapisania.")
 
 # Dodane przez Miłosza 18.04.
 def save_to_csv(row):
@@ -93,8 +93,8 @@ def save_to_csv(row):
 def process_event(event):
     place = event["place"]
     magnitude = float(event["magnitude"])
-    longitude = float(event['longitude']), # has to be here to be able to show on a map
-    latitude = float(event['latitude']),
+    longitude = float(event['longitude']) # usunięty przecinek 15.05
+    latitude = float(event['latitude']) # usunięty przecinek 15.05
     depth = float(event["depth"])
     event_id = event["id"]
     time = event["time"]
