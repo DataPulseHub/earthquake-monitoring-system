@@ -1,22 +1,79 @@
 version: '3.8'
 
 services:
+
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: projekt_irl-zookeeper-1
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
 
   kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    depends_on:
-      - zookeeper
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: projekt_irl-kafka-1
     ports:
       - "9092:9092"
+    depends_on:
+      - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  app:
+    build:
+      context: .
+    container_name: travelquake-launcher
+    depends_on:
+      - kafka
+    ports:
+      - "8501:8501"
+    command: streamlit run launcher_gu.py
+    volumes:
+      - ./data:/app/data
+
+  streamlit:
+    build:
+      context: .
+    container_name: travelquake-map
+    depends_on:
+      - kafka
+    ports:
+      - "8502:8501"
+    command: streamlit run visualizor.py
+    volumes:
+      - ./data:/app/data
+
+  csv_exporter:
+    build:
+      context: .
+    container_name: travelquake-csv
+    depends_on:
+      - kafka
+    command: python csv_exporter.py
+    volumes:
+      - ./data:/app/data
+
+  producer:
+    build:
+      context: .
+    container_name: travelquake-producer
+    depends_on:
+      - kafka
+    command: python earthquake_producer.py
+    volumes:
+      - ./data:/app/data
+
+  alert_engine:
+    build:
+      context: .
+    container_name: travelquake-alert
+    depends_on:
+      - kafka
+    command: python alert_engine.py
+    volumes:
+      - ./data:/app/data

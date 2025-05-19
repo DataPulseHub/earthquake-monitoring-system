@@ -1,119 +1,120 @@
+import json
+from kafka import KafkaProducer, KafkaConsumer
 import pandas as pd
-import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-# Lista popularnych lokalizacji turystycznych
-popular_locations = ["Tokyo", "Bali", "San Francisco", "Jakarta", "Los Angeles", "Kyoto"]
+# ————— KONFIGURACJA —————
+KAFKA_BROKER = "kafka:9092"
+SOURCE_TOPIC = "earthquake_data"
+ALERT_TOPIC  = "alert_stream"
 
-# Funkcja do generowania treści alertów (na podstawie kodu z zadania 3)
-def generate_alert_text(place, magnitude, depth):
-    if magnitude < 3.0:
-        risk_level = "No risk"
-        alert_text = f"ALERT: No risk in the region {place}.\n"
-    elif 3.0 <= magnitude < 4.0:
-        risk_level = "Low risk"
-        alert_text = f"EARTHQUAKE ALERT: Earthquake in the region {place}.\n"
-    elif 4.0 <= magnitude < 5.0:
-        risk_level = "Medium risk"
-        alert_text = f"EARTHQUAKE ALERT: Earthquake in the region {place}.\n"
-    else:
-        risk_level = "High risk"
-        alert_text = f"EARTHQUAKE ALERT: Earthquake in the region {place}.\n"
+# dane do SMTP
+FROM_EMAIL    = "travelquake.alerts@gmail.com"          # Gmail
+FROM_PASSWORD = "dgdb cffe ynsz vksu"   # Hasło aplikacji
 
-    alert_text += f"Magnitude: {magnitude}, Depth: {depth} km\n"
-    alert_text += f"Risk level: {risk_level}\n"
+# ————— PRODUCER i CONSUMER —————
+producer = KafkaProducer(
+    bootstrap_servers=KAFKA_BROKER,
+    value_serializer=lambda v: json.dumps(v).encode("utf-8")
+)
 
-    # Dodatkowe zalecenia
-    if magnitude >= 5.0:
-        alert_text += "Recommended actions: Evacuation in the affected zones!\n"
-    elif magnitude >= 4.0:
-        alert_text += "Recommended actions: Exercise caution and monitor the situation.\n"
-    else:
-        alert_text += "Recommended actions: Monitor the situation, no immediate actions needed.\n"
+consumer = KafkaConsumer(
+    SOURCE_TOPIC,
+    bootstrap_servers=KAFKA_BROKER,
+    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+    auto_offset_reset="latest",
+    enable_auto_commit=True,
+    group_id="alert-engine-group"
+)
 
-    return alert_text, risk_level
+# ————— FUNKCJE POMOCNICZE —————
+def load_emails_from_csv(path="emails.csv"):
+    try:
+        df = pd.read_csv(path, header=None, names=["email"])
+        return df["email"].dropna().tolist()
+    except Exception as e:
+        print(f"❌ Błąd wczytywania pliku emails.csv: {e}")
+        return []
 
-# Wczytanie danych z filtered_quakes.csv (zakomentowane przez Miłosza 18.04. i 15.05)
-# if os.path.exists("filtered_quakes.csv"):
-#     df = pd.read_csv("filtered_quakes.csv")
-# else:
-#     print("❌ Brak pliku filtered_quakes.csv – nie można wygenerować alertów.")
-#     exit()
+def send_email_alert(subject, body, to_emails):
+    for to_email in to_emails:
+        msg = MIMEMultipart()
+        msg["From"]    = FROM_EMAIL
+        msg["To"]      = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain"))
+        try:
+            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server.starttls()
+            server.login(FROM_EMAIL, FROM_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+            print(f"📧 Wysłano powiadomienie do: {to_email}")
+        except Exception as e:
+            print(f"❌ Błąd wysyłania do {to_email}: {e}")
 
-# Sprawdzenie, czy plik alerts.csv już istnieje
-if os.path.exists("alerts.csv"):
-    alerts_df = pd.read_csv("alerts.csv")
-    existing_ids = set(alerts_df["alert_id"])
-else:
-    alerts_df = pd.DataFrame(columns=[
-        "alert_id", "time", "place", "magnitude", "depth", "risk_level", "alert_text"
-    ])
-    existing_ids = set()
+# ————— START —————
+print("🚨 Alert Engine – nasłuchiwanie zdarzeń...")
 
-# # Przetwarzanie alertów
-# new_alerts = []            #(zakomentowane przez Miłosza 18.04.)
+emails_list = load_emails_from_csv("emails.csv")
+if not emails_list:
+    print("⚠️ Brak adresów w emails.csv – powiadomienia e-mail wyłączone.")
 
-# for _, row in df.iterrows():
-#     if any(location in row["place"] for location in popular_locations):
-#         alert_id = row["id"]
-#         if alert_id in existing_ids:
-#             continue  # unikaj duplikatów
+for msg in consumer:
+    try:
+        row = msg.value
+        # walidacja pól
+        if not all(k in row for k in ["id","place","time","latitude","longitude","magnitude","depth"]):
+            print("⚠️ Pominięto: brak wymaganych pól.")
+            continue
 
-#         alert_text, risk_level = generate_alert_text(row["place"], row["magnitude"], row["depth"])
+        # parsowanie czasu
+        parsed_time = pd.to_datetime(int(row["time"]), unit="ms", utc=True)
+        if parsed_time.year < 2000:
+            print(f"⚠️ Pominięto: niepoprawna data {row['time']}")
+            continue
 
-#         new_alerts.append({
-#             "alert_id": alert_id,
-#             "time": row["time"],
-#             "place": row["place"],
-#             "magnitude": row["magnitude"],
-#             "depth": row["depth"],
-#             "risk_level": risk_level,
-#             "alert_text": alert_text
-#         })
+        # poziom ryzyka
+        risk_level = (
+            "Extreme" if row["magnitude"] >= 7 else
+            "High"    if row["magnitude"] >= 6 else
+            "Moderate"if row["magnitude"] >= 5 else
+            "Low"     if row["magnitude"] >= 4 else
+            "No risk"
+        )
 
-#         print(alert_text)
-
-# Zapis do alerts.csv zakomentowane 15.05
-# if new_alerts:
-#     new_df = pd.DataFrame(new_alerts)
-#     alerts_df = pd.concat([alerts_df, new_df], ignore_index=True)
-#     alerts_df.to_csv("alerts.csv", index=False)
-#     print(f"\n✅ Zapisano {len(new_alerts)} nowych alertów do alerts.csv.")
-# else:
-#     print("ℹ️ Brak nowych alertów do zapisania.")
-
-# Dodane przez Miłosza 18.04.
-def save_to_csv(row):
-    filename = "alerts.csv"
-    file_exists = os.path.isfile(filename)
-
-    df = pd.DataFrame([row])
-    df.to_csv(filename, mode='a', header=not file_exists, index=False)
-
-# Dodane przez Miłosza 18.04.
-def process_event(event):
-    place = event["place"]
-    magnitude = float(event["magnitude"])
-    longitude = float(event['longitude']) # usunięty przecinek 15.05
-    latitude = float(event['latitude']) # usunięty przecinek 15.05
-    depth = float(event["depth"])
-    event_id = event["id"]
-    time = event["time"]
-
-    if any(loc in place for loc in popular_locations):
-        alert_text, risk_level = generate_alert_text(place, magnitude, depth)
-        print(alert_text)
-
-        row = {
-            "alert_id": event_id,
-            "time": time,
-            "longitude": longitude,
-            "latitude": latitude,
-            "place": place,
-            "magnitude": magnitude,
-            "depth": depth,
-            "risk_level": risk_level,
-            "alert_text": alert_text
+        # budowa alertu
+        alert = {
+            "alert_id":  row["id"],
+            "place":     row["place"],
+            "time":      int(parsed_time.timestamp()*1000),
+            "latitude":  float(row["latitude"]),
+            "longitude": float(row["longitude"]),
+            "magnitude": float(row["magnitude"]),
+            "depth":     row["depth"],
+            "risk_level":risk_level,
+            "alert_text":f"{risk_level} risk in {row['place']}."
         }
 
-        save_to_csv(row)
+        # wysyłka do Kafka
+        producer.send(ALERT_TOPIC, alert)
+        print(f"📤 Wysłano alert: {alert['alert_id']} | {alert['place']} | {alert['risk_level']}")
 
+        # powiadomienie e-mail, jeśli moderate+
+        if risk_level in ["Moderate","High","Extreme"] and emails_list:
+            subject = f"TravelQuake ALERT: {risk_level} risk in {row['place']}"
+            body = (
+                f"Alert details:\n"
+                f"Place: {row['place']}\n"
+                f"Time: {parsed_time}\n"
+                f"Magnitude: {row['magnitude']}\n"
+                f"Depth: {row['depth']} km\n"
+                f"Risk Level: {risk_level}\n"
+                f"Alert Text: {alert['alert_text']}"
+            )
+            send_email_alert(subject, body, emails_list)
+
+    except Exception as e:
+        print(f"❌ Błąd przetwarzania alertu: {e}")
